@@ -3,3 +3,4 @@ facts.txt
 config.json
 logs/
 __pycache__/
+*.json
