@@ -1,119 +1,59 @@
-import os, discord
+import discord
 from dotenv import load_dotenv
 from discord.ext import commands
 from discord import app_commands
 from discord.app_commands import AppCommandError, CheckFailure
-from utils.polling import *
-from utils.utilities import *
-from utils.perms import *
-
-load_dotenv()
-
-config = load_config()
+from utils.perms import has_craft_perm, is_admin
+from utils.data import guilds, save_guilds
 
 class IDSetterBot(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="setmcpermsrole", description="Set the role to be able to interact with the Minecraft Server")
-    @is_admin()
-    async def setmcpermsrole(self, interaction: discord.Interaction, role: discord.Role):
-        config["guilds"][str(interaction.guild_id)]["mc_perms_role_id"] = role.id
-        save_config(config)
-        await interaction.response.send_message(f"Role <@&{role.id}> now has minecraft permissions!", ephemeral=True)
-
-    @app_commands.command(name="setmcconsolepermsrole", description="Set the role to be able to interact with the Minecraft Server Console")
-    @is_admin()
-    async def setmcconsolepermsrole(self, interaction: discord.Interaction, role: discord.Role):
-        config["guilds"][str(interaction.guild_id)]["mc_console_perms_role_id"] = role.id
-        save_config(config)
-        await interaction.response.send_message(f"Role <@&{role.id}> now has minecraft console permissions!", ephemeral=True)
-
-    @app_commands.command(name="setmcconsolechannel", description="Set the channel for Minecraft chat")
-    @has_mc_perm()
-    async def setmcconsolechannel(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        if interaction.channel_id != config.get("guilds").get(str(interaction.guild.id)).get("mc_console_channel_id"):
-            await interaction.response.send_message("This channel is not set up for this command", ephemeral=True)
-            return
-        config["guilds"][str(interaction.guild_id)]["mc_console_channel_id"] = channel.id
-        save_config(config)
-        await interaction.response.send_message(f"Channel {channel.name} will now be used for minecraft console!", ephemeral=True)
-
-    @app_commands.command(name="setmcchatchannel", description="Set the channel for Minecraft chat")
-    @has_mc_perm()
-    async def setmcchatchannel(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        if interaction.channel_id != config.get("guilds").get(str(interaction.guild.id)).get("mc_bot_channel_id"):
-            await interaction.response.send_message("This channel is not set up for this command", ephemeral=True)
-            return
-        config["guilds"][str(interaction.guild_id)]["mc_chat_channel_id"] = channel.id
-        save_config(config)
-        await interaction.response.send_message(f"Channel {channel.name} will now be used for minecraft chat!", ephemeral=True)
-
-    @app_commands.command(name="setmcbotchannel", description="Set the channel for the Minecraft bot")
-    @has_mc_perm()
-    async def setmcbotchannel(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        config["guilds"][str(interaction.guild_id)]["mc_bot_channel_id"] = channel.id
-        save_config(config)
-        await interaction.response.send_message(f"Channel {channel.mention} will now be used for the minecraft bot!", ephemeral=True)
-                       
-    @app_commands.command(name="setfactchannel", description="Set the channel for Snoopie facts")
-    @has_snoopie_perm()
+    @app_commands.command(name="setfactchannel", description="Set the channel for craft facts")
+    @has_craft_perm()
     async def setfactchannel(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        config = load_config()
-        guild_id = str(interaction.guild.id)
+        guilds[interaction.guild.id]["channel_id"] = channel.id
+        save_guilds(guilds)
+        await interaction.response.send_message(f"The channel <#{channel.id}> has been set for Facts!", ephemeral=True)
 
-        if "guilds" not in config:
-            config["guilds"] = {}
-        if guild_id not in config["guilds"]:
-            config["guilds"][guild_id] = {}
-
-        config["guilds"][guild_id]["snoopie_channel_id"] = channel.id
-        save_config(config)
-
-        await interaction.response.send_message(
-            f"The channel <#{channel.id}> has been set for Facts!", ephemeral=True
-        )
-
-    @app_commands.command(name="setfactrole", description="Set the role to ping for Snoopie facts")
-    @has_snoopie_perm()
+    @app_commands.command(name="setfactrole", description="Set the role to ping for craft facts")
+    @has_craft_perm()
     async def setfactrole(self, interaction: discord.Interaction, role: discord.Role):
-        config = load_config()
-        guild_id = str(interaction.guild.id)
+        guilds[interaction.guild.id]["ping_role_id"] = role.id
+        save_guilds(guilds)
+        await interaction.response.send_message(f"Role <@&{role.id}> will now be pinged!", ephemeral=True)
 
-        if "guilds" not in config:
-            config["guilds"] = {}
-        if guild_id not in config["guilds"]:
-            config["guilds"][guild_id] = {}
-
-        config["guilds"][guild_id]["snoopie_role_id"] = role.id
-        save_config(config)
-
-        await interaction.response.send_message(f"Role {role.name} will now be pinged!", ephemeral=True)
-
-    @app_commands.command(name="setpermsrole", description="Set the role to be able to send Snoopie fact commands")
+    @app_commands.command(name="setpermsrole", description="Set the role to be able to send craft fact commands")
     @is_admin()
     async def setpermsrole(self, interaction: discord.Interaction, role: discord.Role):
-        config = load_config()
-        guild_id = str(interaction.guild.id)
-
-        if "guilds" not in config:
-            config["guilds"] = {}
-        if guild_id not in config["guilds"]:
-            config["guilds"][guild_id] = {}
-
-        config["guilds"][guild_id]["snoopy_perms_role_id"] = role.id
-        save_config(config)
-
+        guilds[interaction.guild.id]["perms_role_id"] = role.id
+        save_guilds(guilds)
         await interaction.response.send_message(f"Role <@&{role.id}> now has fact permissions!", ephemeral=True)
 
+    @app_commands.command(name="setfacttopic", description="Set the topic of the fun facts")
+    @has_craft_perm()
+    async def setfacttopic(self, interaction: discord.Interaction, topic: str):
+        guilds[interaction.guild.id]["topic"] = topic
+        save_guilds(guilds)
+        await interaction.response.send_message(f"{topic} is now the topic of this servers daily facts!", ephemeral=True)
+
+    @app_commands.command(name="settime", description="Set the time (EST) of the fun fact bot triggering in 24hour time")
+    @has_craft_perm()
+    async def settime(self, interaction: discord.Interaction, hour: str):
+        guilds[interaction.guild.id]["hour"] = hour
+        save_guilds(guilds)
+        await interaction.response.send_message(f"Daily facts will now be sent at {hour}! (24hour time)", ephemeral=True)
+        
     async def cog_app_command_error(self, interaction: discord.Interaction, error: AppCommandError):
+        print("handled inside IDSetter cog")
         if isinstance(error, CheckFailure):
             if interaction.response.is_done():
-                await interaction.followup.send("❌ You don't have permission to use this command.", ephemeral=True)
+                await interaction.followup.send(str(error), ephemeral=True)
             else:
-                await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
+                await interaction.response.send_message(str(error), ephemeral=True)
         else:
             print(f"Unhandled error: {error}")
-    
+
 async def setup(bot: commands.Bot):
     await bot.add_cog(IDSetterBot(bot))
