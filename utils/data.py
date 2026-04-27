@@ -36,4 +36,8 @@ def init_data(bot):
     if updated:
         save_guilds(guilds)
 
+async def send_log(bot, message):
+    channel = await bot.fetch_channel(1384783997527130225)
+    await channel.send(message)
+
 guilds = load_guilds()
