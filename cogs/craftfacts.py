@@ -4,6 +4,7 @@ from discord import app_commands
 from discord.app_commands import AppCommandError, CheckFailure
 from utils.utilities import wait_until_hour, ask_gemini, send_facts, send_fact
 from utils.perms import has_craft_perm, is_channel_set, is_gemini_allowed
+from utils.data import send_log
 
 class CraftFacts(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -17,6 +18,7 @@ class CraftFacts(commands.Cog):
     async def hourly_task(self):
         await self.bot.wait_until_ready()
         print("Hourly task triggered!")
+        await send_log(self.bot, "Hourly task triggered!")
         await send_facts(self)
 
     @hourly_task.before_loop
@@ -73,3 +75,4 @@ class CraftFacts(commands.Cog):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(CraftFacts(bot))
+    await send_log(bot, "starting CraftFacts")

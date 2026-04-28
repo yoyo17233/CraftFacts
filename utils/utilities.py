@@ -2,7 +2,7 @@ import os, asyncio
 from datetime import datetime, timedelta
 from google import genai
 from dotenv import load_dotenv
-from utils.data import guilds, save_guilds
+from utils.data import guilds, save_guilds, send_log
 
 load_dotenv()
 GEMINIKEY = os.getenv("GEMINI_API_KEY")
@@ -35,44 +35,50 @@ async def dm_user(bot, user_id, message):
     except Exception as e:
         print(f"Failed to DM user: {e}")
 
-async def get_fact(guild_id):
+async def get_fact(bot, guild_id):
+    await send_log(bot, f"starting get_fact...")
     previous_facts = guilds[guild_id]["previousfacts"]
     topic = guilds[guild_id]["topic"]
 
+    await send_log(bot, f"getting loop...")
     loop = asyncio.get_running_loop()
+    await send_log(bot, f"getting fact from gemini...")
     fact = await loop.run_in_executor(None, ask_gemini, f"{introprompt}\n\nDo not make it about the following facts:{previous_facts} The topic of the fact should be: {topic}, but you can be broad")
+    await send_log(bot, f"getting subtopic...")
     subtopic = await loop.run_in_executor(None, ask_gemini, f"{categorization} The fact to categorize is: {fact}")
+    await send_log(bot, f"done")
 
     if len(previous_facts) >= 30:
         previous_facts.pop() 
     previous_facts.insert(0, subtopic)
     save_guilds(guilds)
+    await send_log(bot, f"factlist updated, returning fact")
 
     return fact
 
 async def send_facts(self):
     now_hour = datetime.now().hour
-    print(f"the hour is {now_hour}")
+    await send_log(self.bot, f"the hour is {now_hour}")
     for guild_id, guild_data in guilds.items():
-        print("checking guild to see if it has channel + roles set")
+        await send_log(self.bot, "checking guild to see if it has channel + roles set")
         if(not guild_data.get("channel_id") or not guild_data.get("ping_role_id")):
             return
-        print(f"checking guildid {guild_id} if it has {guild_data.get("hour")} as time of {now_hour}")
+        await send_log(self.bot, f"checking guildid {guild_id} if it has {guild_data.get("hour")} as time of {now_hour}")
         if guild_data.get("hour") == now_hour:
-            print("getting fact...")
-            fact = await get_fact(guild_id)
-            print(f"Fact is {fact}, getting channel...")
+            await send_log(self.bot, "calling get_fact...")
+            fact = await get_fact(self.bot, guild_id)
+            await send_log(self.bot, f"Fact is {fact}, getting channel...")
             channel = self.bot.get_channel(guilds[guild_id]["channel_id"])
-            print("got channel, sending...")
+            await send_log(self.bot, "got channel, sending...")
             await channel.send(f"<@&{guild_data.get("ping_role_id")}> Incoming CraftFact! (With topic *{guild_data.get("topic")}*)\n\n**{fact}**")
-            print("sent")
+            await send_log(self.bot, "sent")
 
 async def send_fact(self, guild_id):
     print("checking guild to see if it has channel + roles set")
     if(not guilds[guild_id]["channel_id"] or not guilds[guild_id]["ping_role_id"]):
         return
     print("getting fact...")
-    fact = await get_fact(guild_id)
+    fact = await get_fact(self.bot, guild_id)
     print(f"Fact is {fact}, getting channel...")
     channel = self.bot.get_channel(guilds[guild_id]["channel_id"])
     print("got channel, sending...")
@@ -81,6 +87,6 @@ async def send_fact(self, guild_id):
     
 async def wait_until_hour():
     now = datetime.now()
-    target = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)\
-    #target = datetime.now() + timedelta(seconds=10)
+    target = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)      #Live
+    #target = datetime.now() + timedelta(seconds=10)                                     #Testing
     await asyncio.sleep((target - now).total_seconds())
