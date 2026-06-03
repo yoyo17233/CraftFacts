@@ -1,6 +1,6 @@
 import discord, os
 from discord.ext import commands
-from utils.utilities import dm_user, userToDm_id
+from utils.utilities import dm_user, userToDm_id, log
 from utils.data import init_data
 
 VERBOSE = True
@@ -15,10 +15,10 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     await dm_user(bot, userToDm_id, "on_ready called")
 
-    print(f"Logged in as {bot.user}")
+    log(f"Logged in as {bot.user}")
     try:
         synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} slash commands")
+        log(f"Synced {len(synced)} slash commands")
         
         await bot.change_presence(
             activity=discord.Game(f"Daily Facts"),
@@ -26,7 +26,7 @@ async def on_ready():
         )
 
     except Exception as e:
-        print(f"Error syncing commands: {e}")
+        log(f"Error syncing commands: {e}", "WARN")
     
     init_data(bot)
 

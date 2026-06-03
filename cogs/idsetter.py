@@ -5,6 +5,7 @@ from discord import app_commands
 from discord.app_commands import AppCommandError, CheckFailure
 from utils.perms import has_craft_perm, is_admin
 from utils.data import guilds, save_guilds
+from utils.logging import log
 
 class IDSetterBot(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -46,14 +47,14 @@ class IDSetterBot(commands.Cog):
         await interaction.response.send_message(f"Daily facts will now be sent at {hour}! (24hour time)", ephemeral=True)
         
     async def cog_app_command_error(self, interaction: discord.Interaction, error: AppCommandError):
-        print("handled inside IDSetter cog")
+        log("handled inside IDSetter cog")
         if isinstance(error, CheckFailure):
             if interaction.response.is_done():
                 await interaction.followup.send(str(error), ephemeral=True)
             else:
                 await interaction.response.send_message(str(error), ephemeral=True)
         else:
-            print(f"Unhandled error: {error}")
+            log(f"Unhandled error: {error}", "ERROR")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(IDSetterBot(bot))

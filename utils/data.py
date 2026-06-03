@@ -1,5 +1,6 @@
 import json, os
 from dotenv import load_dotenv
+from utils.logging import log
 
 load_dotenv()
 CONFIG_FILE = os.getenv("CONFIG_FILE")
@@ -29,15 +30,11 @@ def save_guilds(data):
 def init_data(bot):
     updated = False
     for guild in bot.guilds:
-        print("checking guild", guild.id)
+        log("checking guild \"" + str(guild.name) + "\"")
         if guild.id not in guilds:
             guilds[guild.id] = DEFAULT_GUILD_CONFIG
             updated = True
     if updated:
         save_guilds(guilds)
-
-async def send_log(bot, message):
-    channel = await bot.fetch_channel(1384783997527130225)
-    await channel.send(message)
 
 guilds = load_guilds()

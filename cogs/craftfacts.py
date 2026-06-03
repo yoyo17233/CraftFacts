@@ -4,7 +4,7 @@ from discord import app_commands
 from discord.app_commands import AppCommandError, CheckFailure
 from utils.utilities import wait_until_hour, ask_gemini, send_facts, send_fact
 from utils.perms import has_craft_perm, is_channel_set, is_gemini_allowed
-from utils.data import send_log
+from utils.logging import log
 
 class CraftFacts(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -17,8 +17,7 @@ class CraftFacts(commands.Cog):
     @tasks.loop(hours=1)
     async def hourly_task(self):
         await self.bot.wait_until_ready()
-        print("Hourly task triggered!")
-        await send_log(self.bot, "Hourly task triggered!")
+        log("Hourly task triggered!")
         await send_facts(self)
 
     @hourly_task.before_loop
@@ -64,15 +63,15 @@ class CraftFacts(commands.Cog):
             await interaction.followup.send(chunk)
         
     async def cog_app_command_error(self, interaction: discord.Interaction, error: AppCommandError):
-        print("handled inside IDSetter cog")
+        log("handled inside IDSetter cog")
         if isinstance(error, CheckFailure):
             if interaction.response.is_done():
                 await interaction.followup.send(str(error), ephemeral=True)
             else:
                 await interaction.response.send_message(str(error), ephemeral=True)
         else:
-            print(f"Unhandled error: {error}")
+            log(f"Unhandled error: {error}", "ERROR")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(CraftFacts(bot))
-    await send_log(bot, "starting CraftFacts")
+    log("Starting CraftFacts")
