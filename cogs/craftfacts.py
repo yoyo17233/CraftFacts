@@ -6,6 +6,9 @@ from utils.utilities import wait_until_hour, ask_gemini, send_facts, send_fact
 from utils.perms import has_craft_perm, is_channel_set, is_gemini_allowed
 from utils.logging import log
 
+MAX_LEN = 2000
+CHUNK_LIMIT = 3
+
 class CraftFacts(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -17,7 +20,6 @@ class CraftFacts(commands.Cog):
     @tasks.loop(hours=1)
     async def hourly_task(self):
         await self.bot.wait_until_ready()
-        log("Hourly task triggered!")
         await send_facts(self)
 
     @hourly_task.before_loop
@@ -41,36 +43,35 @@ class CraftFacts(commands.Cog):
         response = await loop.run_in_executor(None, ask_gemini, query)
 
         chunks = []
-        max_len = 2000
         text = response
-
-        while len(text) > max_len:
-            cutoff = text.rfind('.', 0, max_len)
+        while text:
+            if len(text) <= MAX_LEN:
+                chunks.append(text)
+                break
+            cutoff = text.rfind('.', 0, MAX_LEN)
             if cutoff == -1:
-                cutoff = max_len
+                cutoff = MAX_LEN
+            chunks.append(text[:cutoff + 1].strip())
+            text = text[cutoff + 1:].strip()
 
-            chunks.append(text[:cutoff+1].strip())
-            text = text[cutoff+1:].strip()
-
-        if len(chunks) < 3 and text:
-            chunks.append(text)
-        elif len(text) > 0:
-            chunks.append("Message too long, message trimmed")
+        truncated = len(chunks) > CHUNK_LIMIT
+        if truncated:
+            chunks = chunks[:CHUNK_LIMIT]
 
         await status_msg.edit(content=chunks[0])
-
         for chunk in chunks[1:]:
             await interaction.followup.send(chunk)
+        if truncated:
+            await interaction.followup.send("Response too long, trimmed.")
         
     async def cog_app_command_error(self, interaction: discord.Interaction, error: AppCommandError):
-        log("handled inside IDSetter cog")
         if isinstance(error, CheckFailure):
             if interaction.response.is_done():
                 await interaction.followup.send(str(error), ephemeral=True)
             else:
                 await interaction.response.send_message(str(error), ephemeral=True)
         else:
-            log(f"Unhandled error: {error}", "ERROR")
+            log(f"Unhandled error handled in CraftFacts cog: {error}", "ERROR")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(CraftFacts(bot))

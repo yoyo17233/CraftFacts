@@ -2,6 +2,7 @@ import discord, os
 from discord.ext import commands
 from utils.utilities import dm_user, userToDm_id, log
 from utils.data import init_data
+from utils.logging import clearlogs
 
 VERBOSE = True
 
@@ -16,6 +17,7 @@ async def on_ready():
     await dm_user(bot, userToDm_id, "on_ready called")
 
     log(f"Logged in as {bot.user}")
+    clearlogs()
     try:
         synced = await bot.tree.sync()
         log(f"Synced {len(synced)} slash commands")

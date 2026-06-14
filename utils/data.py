@@ -30,7 +30,6 @@ def save_guilds(data):
 def init_data(bot):
     updated = False
     for guild in bot.guilds:
-        log("checking guild \"" + str(guild.name) + "\"")
         if guild.id not in guilds:
             guilds[guild.id] = DEFAULT_GUILD_CONFIG
             updated = True

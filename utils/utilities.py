@@ -13,16 +13,15 @@ superusers = [int(x) for x in SUPERUSERS.split(",") if x.strip()]
 userToDm_id = superusers[0]
 client = genai.Client(api_key=GEMINIKEY)
 
-introprompt = "You are a fact expert writing in the style of Snapple facts. Generate a true, interesting, and surprising fact in a short, friendly tone. Make sure it is accurate, easy to understand, and sounds like it could be loged under a bottle cap. Use clear and concise wording, no more than 1–2 sentences. Begin the fact directly, like: 'Did you know...' or 'Honey never spoils...' Avoid common facts, urban legends, or anything misleading or unverified. Double-check that it is scientifically or historically correct."
-categorization = "Summarize the fact in as few words as possible, for example, 'flamingo group name' for a flamboyance of flamingos, or 'temperature of lightning'. If the fact’s topic is not 'Generic', give the subtopic, and provide more detail without including the greater topic name, still only using a couple of words. If the topic is 'Generic', a simple topic name is sufficient."
+FACT_DELIMITER = "---"
+introprompt = "You are a fact expert writing in the style of Snapple facts. Generate a true, interesting, and surprising fact in a short, friendly tone. Make sure it is accurate, easy to understand, and sounds like it could be loged under a bottle cap. Use clear and concise wording, no more than 1–2 sentences. Begin the fact directly, like: ‘Did you know...’ or ‘Honey never spoils...’ Avoid common facts, urban legends, or anything misleading or unverified. Double-check that it is scientifically or historically correct."
+categorization = "Summarize the fact in as few words as possible, for example, ‘flamingo group name’ for a flamboyance of flamingos, or ‘temperature of lightning’. If the fact’s topic is not ‘Generic’, give the subtopic, and provide more detail without including the greater topic name, still only using a couple of words. If the topic is ‘Generic’, a simple topic name is sufficient."
     
 def ask_gemini(prompt: str) -> str:
-    log(f"Sending prompt to Gemini")
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt
     )
-    log("Received response from Gemini: " + str(response.text))
     return response.text
 
 async def dm_user(bot, user_id, message):
@@ -33,57 +32,62 @@ async def dm_user(bot, user_id, message):
         await user.send(message)
         log(f"DM sent to {user.global_name}")
     except Exception as e:
-        log(f"Failed to DM user: {e}")
+        log(f"Failed to DM user: {e}", "ERROR")
 
 async def get_fact(bot, guild_id):
-    log(f"starting get_fact...")
     previous_facts = guilds[guild_id]["previousfacts"]
     topic = guilds[guild_id]["topic"]
-
-    log(f"getting loop...")
     loop = asyncio.get_running_loop()
-    log(f"getting fact from gemini...")
-    fact = await loop.run_in_executor(None, ask_gemini, f"{introprompt}\n\nDo not make it about the following facts:{previous_facts} The topic of the fact should be: {topic}, but you can be broad")
-    log(f"getting subtopic...")
-    subtopic = await loop.run_in_executor(None, ask_gemini, f"{categorization} The fact to categorize is: {fact}")
-    log(f"done")
+
+    prompt = (
+        f"{introprompt}\n\n"
+        f"Do not make it about the following facts: {previous_facts}\n"
+        f"The topic of the fact should be: {topic}, but you can be broad.\n\n"
+        f"After the fact, write '{FACT_DELIMITER}' on its own line, then write a short subtopic label. "
+        f"Subtopic instructions: {categorization}"
+    )
+
+    try:
+        raw = await loop.run_in_executor(None, ask_gemini, prompt)
+        parts = raw.split(FACT_DELIMITER, 1)
+        fact = parts[0].strip()
+        subtopic = parts[1].strip() if len(parts) > 1 else "General"
+    except Exception as e:
+        log(f"Gemini failed to generate fact for guild {guild_id}: {e}", "ERROR")
+        return None
 
     if len(previous_facts) >= 30:
-        previous_facts.pop() 
+        previous_facts.pop()
     previous_facts.insert(0, subtopic)
     save_guilds(guilds)
-    log(f"factlist updated, returning fact")
+    log(f"Fact retrieved, subtopic: {subtopic}")
 
     return fact
 
 async def send_facts(self):
     now_hour = datetime.now().hour
-    log(f"the hour is {now_hour}")
     for guild_id, guild_data in guilds.items():
-        log("checking guild to see if it has channel + roles set")
-        if(not guild_data.get("channel_id") or not guild_data.get("ping_role_id")):
-            return
-        log(f"checking guildid {guild_id} if it has {guild_data.get("hour")} as time of {now_hour}")
+        if not guild_data.get("channel_id") or not guild_data.get("ping_role_id"):
+            continue
         if guild_data.get("hour") == now_hour:
-            log("calling get_fact...")
             fact = await get_fact(self.bot, guild_id)
-            log(f"Fact is {fact}, getting channel...")
+            if fact is None:
+                log(f"Skipping guild {guild_id} — fact generation failed", "ERROR")
+                continue
             channel = self.bot.get_channel(guilds[guild_id]["channel_id"])
-            log("got channel, sending...")
-            await channel.send(f"<@&{guild_data.get("ping_role_id")}> Incoming CraftFact! (With topic *{guild_data.get("topic")}*)\n\n**{fact}**")
-            log("sent")
+            await channel.send(f"<@&{guild_data.get('ping_role_id')}> Incoming CraftFact! (With topic *{guild_data.get('topic')}*)\n\n**{fact}**")
+            log("Daily fact sent to guild " + str(guild_id))
 
 async def send_fact(self, guild_id):
-    log("checking guild to see if it has channel + roles set")
-    if(not guilds[guild_id]["channel_id"] or not guilds[guild_id]["ping_role_id"]):
+    if not guilds[guild_id]["channel_id"] or not guilds[guild_id]["ping_role_id"]:
         return
-    log("getting fact...")
     fact = await get_fact(self.bot, guild_id)
-    log(f"Fact is {fact}, getting channel...")
+    if fact is None:
+        log(f"Fact generation failed for guild {guild_id}", "ERROR")
+        return
     channel = self.bot.get_channel(guilds[guild_id]["channel_id"])
-    log("got channel, sending...")
-    await channel.send(f"<@&{guilds[guild_id]["ping_role_id"]}> Incoming CraftFact! (With topic *{guilds[guild_id]["topic"]}*)\n\n**{fact}**")
-    log("sent")
+    await channel.send(f"<@&{guilds[guild_id]['ping_role_id']}> Incoming CraftFact! (With topic *{guilds[guild_id]['topic']}*)\n\n**{fact}**")
+    log("Single CraftFact sent to guild " + str(guild_id))
     
 async def wait_until_hour():
     now = datetime.now()

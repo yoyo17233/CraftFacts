@@ -11,50 +11,55 @@ class IDSetterBot(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="setfactchannel", description="Set the channel for craft facts")
-    @has_craft_perm()
-    async def setfactchannel(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        guilds[interaction.guild.id]["channel_id"] = channel.id
-        save_guilds(guilds)
-        await interaction.response.send_message(f"The channel <#{channel.id}> has been set for Facts!", ephemeral=True)
-
-    @app_commands.command(name="setfactrole", description="Set the role to ping for craft facts")
-    @has_craft_perm()
-    async def setfactrole(self, interaction: discord.Interaction, role: discord.Role):
-        guilds[interaction.guild.id]["ping_role_id"] = role.id
-        save_guilds(guilds)
-        await interaction.response.send_message(f"Role <@&{role.id}> will now be pinged!", ephemeral=True)
-
-    @app_commands.command(name="setpermsrole", description="Set the role to be able to send craft fact commands")
+    @app_commands.command(name="setup", description="Initial setup: set fact channel, roles, topic, and time")
     @is_admin()
-    async def setpermsrole(self, interaction: discord.Interaction, role: discord.Role):
-        guilds[interaction.guild.id]["perms_role_id"] = role.id
+    async def setup(
+        self,
+        interaction: discord.Interaction,
+        fact_role: discord.Role,
+        perms_role: discord.Role,
+        topic: str,
+        hour: str,
+    ):
+        guild = guilds[interaction.guild.id]
+        guild["channel_id"] = interaction.channel.id
+        guild["ping_role_id"] = fact_role.id
+        guild["perms_role_id"] = perms_role.id
+        guild["topic"] = topic
+        guild["hour"] = hour
         save_guilds(guilds)
-        await interaction.response.send_message(f"Role <@&{role.id}> now has fact permissions!", ephemeral=True)
+        await interaction.response.send_message(
+            f"Setup complete!\n"
+            f"- Fact channel: <#{interaction.channel.id}>\n"
+            f"- Ping role: <@&{fact_role.id}>\n"
+            f"- Permissions role: <@&{perms_role.id}>\n"
+            f"- Topic: {topic}\n"
+            f"- Time: {hour} (24h EST)",
+            ephemeral=True,
+        )
 
-    @app_commands.command(name="setfacttopic", description="Set the topic of the fun facts")
+    @app_commands.command(name="changetopic", description="Change the topic of the daily facts")
     @has_craft_perm()
-    async def setfacttopic(self, interaction: discord.Interaction, topic: str):
+    async def changetopic(self, interaction: discord.Interaction, topic: str):
         guilds[interaction.guild.id]["topic"] = topic
         save_guilds(guilds)
-        await interaction.response.send_message(f"{topic} is now the topic of this servers daily facts!", ephemeral=True)
+        await interaction.response.send_message(f"{topic} is now the topic of this server's daily facts!", ephemeral=True)
 
-    @app_commands.command(name="settime", description="Set the time (EST) of the fun fact bot triggering in 24hour time")
+    @app_commands.command(name="changetime", description="Change the time (EST) the daily fact is sent (24h format)")
     @has_craft_perm()
-    async def settime(self, interaction: discord.Interaction, hour: str):
+    async def changetime(self, interaction: discord.Interaction, hour: str):
         guilds[interaction.guild.id]["hour"] = hour
         save_guilds(guilds)
-        await interaction.response.send_message(f"Daily facts will now be sent at {hour}! (24hour time)", ephemeral=True)
-        
+        await interaction.response.send_message(f"Daily facts will now be sent at {hour}! (24h time)", ephemeral=True)
+
     async def cog_app_command_error(self, interaction: discord.Interaction, error: AppCommandError):
-        log("handled inside IDSetter cog")
         if isinstance(error, CheckFailure):
             if interaction.response.is_done():
                 await interaction.followup.send(str(error), ephemeral=True)
             else:
                 await interaction.response.send_message(str(error), ephemeral=True)
         else:
-            log(f"Unhandled error: {error}", "ERROR")
+            log(f"Unhandled error handled in IDSetter cog: {error}", "ERROR")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(IDSetterBot(bot))
