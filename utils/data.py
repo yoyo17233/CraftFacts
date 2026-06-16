@@ -1,4 +1,4 @@
-import json, os
+import json, os, copy
 from dotenv import load_dotenv
 from utils.logging import log
 
@@ -12,7 +12,8 @@ DEFAULT_GUILD_CONFIG = {
     "hour": 10,
     "geminiperms": False,
     "topic":"Generic (No Topic)",
-    "previousfacts":[]
+    "previousfacts":[],
+    "stored_fact": ""
 }
 
 def load_guilds():
@@ -31,7 +32,7 @@ def init_data(bot):
     updated = False
     for guild in bot.guilds:
         if guild.id not in guilds:
-            guilds[guild.id] = DEFAULT_GUILD_CONFIG
+            guilds[guild.id] = copy.deepcopy(DEFAULT_GUILD_CONFIG)
             updated = True
     if updated:
         save_guilds(guilds)

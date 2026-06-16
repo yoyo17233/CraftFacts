@@ -40,7 +40,7 @@ def check_is_admin(interaction: discord.Interaction) -> bool:
     return False
     
 def check_is_superuser(interaction: discord.Interaction) -> bool:
-    if interaction.author_id in superusers:
+    if interaction.user.id in superusers:
         return True
     return False
     
