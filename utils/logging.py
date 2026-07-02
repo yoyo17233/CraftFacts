@@ -5,6 +5,7 @@ def log(message, type="INFO"):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     line = f"[{timestamp}] [{type}]: {message}"
     print(line)
+    os.makedirs("logs", exist_ok=True)
     with open(os.path.join("logs", f"{timestamp[:10]}.log"), "a", encoding="utf-8") as file:
         file.write(line + "\n")
 
