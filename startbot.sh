@@ -1,4 +1,8 @@
 #!/bin/bash
 cd "$(dirname "$0")"
-nohup python3 main-craftfacts.py > /dev/null 2>&1 &
+if [ ! -d ".venv" ]; then
+    python3 -m venv .venv
+    .venv/bin/pip install -q -r requirements.txt
+fi
+nohup .venv/bin/python3 main-craftfacts.py > /dev/null 2>&1 &
 disown
