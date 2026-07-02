@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from utils.logging import log
 
 load_dotenv()
-CONFIG_FILE = os.getenv("CONFIG_FILE")
+CONFIG_FILE = os.getenv("CONFIG_FILE", "config.json")
 
 DEFAULT_GUILD_CONFIG = {
     "channel_id": 0,

@@ -8,6 +8,8 @@ VERBOSE = True
 
 def has_craft_perm():
     async def predicate(interaction: discord.Interaction) -> bool:
+        if interaction.guild is None or not isinstance(interaction.user, discord.Member):
+            raise CheckFailure("This command can only be used in a server.")
         perms_role_id = guilds[interaction.guild.id]["perms_role_id"]
 
         if not perms_role_id:
@@ -46,6 +48,8 @@ def check_is_superuser(interaction: discord.Interaction) -> bool:
     
 def is_gemini_allowed():
     async def predicate(interaction) -> bool:
+        if interaction.guild is None:
+            raise CheckFailure("This command can only be used in a server.")
         if guilds[interaction.guild.id]["geminiperms"]:
             return True
         raise CheckFailure("Gemini commands are disabled in this server.")
@@ -53,6 +57,8 @@ def is_gemini_allowed():
 
 def is_channel_set():
     async def predicate(interaction) -> bool:
+        if interaction.guild is None:
+            raise CheckFailure("This command can only be used in a server.")
         if guilds[interaction.guild.id]["channel_id"]:
             return True
         raise CheckFailure("Channel is not set for this server")

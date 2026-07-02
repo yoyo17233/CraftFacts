@@ -21,6 +21,9 @@ class IDSetterBot(commands.Cog):
         topic: str,
         hour: str,
     ):
+        if interaction.guild is None or interaction.channel is None:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
         guild = guilds[interaction.guild.id]
         guild["channel_id"] = interaction.channel.id
         guild["ping_role_id"] = fact_role.id
@@ -41,6 +44,9 @@ class IDSetterBot(commands.Cog):
     @app_commands.command(name="changetopic", description="Change the topic of the daily facts")
     @has_craft_perm()
     async def changetopic(self, interaction: discord.Interaction, topic: str):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
         guilds[interaction.guild.id]["topic"] = topic
         save_guilds(guilds)
         await interaction.response.send_message(f"{topic} is now the topic of this server's daily facts!", ephemeral=True)
@@ -48,6 +54,9 @@ class IDSetterBot(commands.Cog):
     @app_commands.command(name="changetime", description="Change the time (EST) the daily fact is sent (24h format)")
     @has_craft_perm()
     async def changetime(self, interaction: discord.Interaction, hour: str):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
         guilds[interaction.guild.id]["hour"] = hour
         save_guilds(guilds)
         await interaction.response.send_message(f"Daily facts will now be sent at {hour}! (24h time)", ephemeral=True)

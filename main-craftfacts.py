@@ -7,6 +7,8 @@ from utils.logging import clearlogs
 VERBOSE = True
 
 TOKEN = os.getenv("DISCORD_TOKEN")
+if not TOKEN:
+    raise RuntimeError("DISCORD_TOKEN is not set")
 intents = discord.Intents.default()
 intents.guilds = True  
 intents.members = True

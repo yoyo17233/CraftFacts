@@ -7,6 +7,8 @@ from utils.logging import log
 
 load_dotenv()
 GEMINIKEY = os.getenv("GEMINI_API_KEY")
+if not GEMINIKEY:
+    raise RuntimeError("GEMINI_API_KEY is not set")
 DMS = os.getenv("DMS", "False").lower() in ("true", "1", "yes")
 SUPERUSERS = os.getenv("SUPERUSERS", "")
 superusers = [int(x) for x in SUPERUSERS.split(",") if x.strip()]
@@ -23,6 +25,8 @@ def ask_gemini(prompt: str) -> str:
         model="gemini-2.5-flash",
         contents=prompt
     )
+    if response.text is None:
+        raise ValueError("Gemini returned no text")
     return response.text
 
 async def dm_user(bot, user_id, message):
