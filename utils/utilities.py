@@ -103,7 +103,7 @@ async def send_fact(self, guild_id):
     
 async def wait_until_hour():
     now = datetime.now()
-    target = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)      #Live
+    target = (now + timedelta(hours=1)).replace(minute=0, second=4, microsecond=0)      #Live
     #target = datetime.now() + timedelta(seconds=10)                                     #Testing
     await asyncio.sleep((target - now).total_seconds())
 
